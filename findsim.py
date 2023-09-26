@@ -137,9 +137,9 @@ class Lexicon:
                 # Do something with this word and vector.
                 if word not in lexicon.word_to_index:
                     lexicon.word_to_index[word] = len(lexicon.word_to_index)
-                    word_vectors.append(vector)
+                word_vectors.append(vector)
 
-        lexicon.embeddings = word_vectors
+        lexicon.embeddings = th.stack(word_vectors)
 
         return lexicon
 
@@ -169,24 +169,11 @@ class Lexicon:
         
         target_index = self.word_to_index[word]
         target_vector = self.embeddings[target_index]
-        
-        similar_words = [] # keep track of similarity scores
 
-        for t_word, t_index in self.word_to_index.items():
-            if t_index == target_index:
-                continue # skip the target word
-            if plus is not None and t_word not in self.word_to_index:
-                continue
-            if minus is not None and t_word not in self.word_to_index:
-                continue
 
-            t_vector = self.embeddings[t_index]
-            similarity = th.dot(target_vector, t_vector) / (th.norm(target_vector) * th.norm(t_vector))
-            similar_words.append((t_word, similarity))
-
-        similar_words.sort(key=lambda x: x[1], reverse=True)
-        return [x[0] for x in similar_words[:10]]
-
+        similar_words = th.matmul(self.embeddings, target_vector) / (th.norm(self.embeddings, dim=1) * th.norm(target_vector))
+        similar_words = th.argsort(similar_words, descending=True)
+        return [list(self.word_to_index.keys())[x] for x in similar_words[1:11]]     
 
 def main():
     args = parse_args()
