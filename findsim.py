@@ -139,7 +139,7 @@ class Lexicon:
                     lexicon.word_to_index[word] = len(lexicon.word_to_index)
                     word_vectors.append(vector)
 
-        lexicon.embeddings = th.Tensor(word_vectors)
+        lexicon.embeddings = word_vectors
 
         return lexicon
 
