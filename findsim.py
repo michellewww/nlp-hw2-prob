@@ -170,10 +170,20 @@ class Lexicon:
         target_index = self.word_to_index[word]
         target_vector = self.embeddings[target_index]
 
+        cosine_similarities = th.matmul(self.embeddings, target_vector) / (th.norm(self.embeddings, dim=1) * th.norm(target_vector))
 
-        similar_words = th.matmul(self.embeddings, target_vector) / (th.norm(self.embeddings, dim=1) * th.norm(target_vector))
-        similar_words = th.argsort(similar_words, descending=True)
-        return [list(self.word_to_index.keys())[x] for x in similar_words[1:11]]     
+        if plus:
+            plus_index = self.word_to_index.get(plus, None)
+            if plus_index is not None:
+                cosine_similarities += th.matmul(self.embeddings, self.embeddings[plus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[plus_index]))
+        if minus:
+            minus_index = self.word_to_index.get(minus, None)
+            if minus_index is not None:
+                cosine_similarities -= th.matmul(self.embeddings, self.embeddings[minus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[minus_index]))
+
+        similar_words = th.argsort(cosine_similarities, descending=True)
+
+        return [list(self.word_to_index.keys())[x] for x in similar_words[1:11]]
 
 def main():
     args = parse_args()
