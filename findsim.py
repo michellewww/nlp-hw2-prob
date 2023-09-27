@@ -176,10 +176,14 @@ class Lexicon:
             plus_index = self.word_to_index.get(plus, None)
             if plus_index is not None:
                 cosine_similarities += th.matmul(self.embeddings, self.embeddings[plus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[plus_index]))
+                cosine_similarities[plus_index] = -float("inf")
+
         if minus:
             minus_index = self.word_to_index.get(minus, None)
             if minus_index is not None:
                 cosine_similarities -= th.matmul(self.embeddings, self.embeddings[minus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[minus_index]))
+                cosine_similarities[minus_index] = -float("inf")
+
 
         # Exclude the original word
         cosine_similarities[target_index] = -float("inf")
