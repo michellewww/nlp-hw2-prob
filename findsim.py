@@ -137,9 +137,9 @@ class Lexicon:
                 # Do something with this word and vector.
                 if word not in lexicon.word_to_index:
                     lexicon.word_to_index[word] = len(lexicon.word_to_index)
-                    word_vectors.append(vector)
+                word_vectors.append(vector)
 
-        lexicon.embeddings = th.Tensor(word_vectors)
+        lexicon.embeddings = th.stack(word_vectors)
 
         return lexicon
 
@@ -169,24 +169,27 @@ class Lexicon:
         
         target_index = self.word_to_index[word]
         target_vector = self.embeddings[target_index]
-        
-        similar_words = [] # keep track of similarity scores
 
-        for t_word, t_index in self.word_to_index.items():
-            if t_index == target_index:
-                continue # skip the target word
-            if plus is not None and t_word not in self.word_to_index:
-                continue
-            if minus is not None and t_word not in self.word_to_index:
-                continue
+        cosine_similarities = th.matmul(self.embeddings, target_vector) / (th.norm(self.embeddings, dim=1) * th.norm(target_vector))
 
-            t_vector = self.embeddings[t_index]
-            similarity = th.dot(target_vector, t_vector) / (th.norm(target_vector) * th.norm(t_vector))
-            similar_words.append((t_word, similarity))
+        if plus:
+            plus_index = self.word_to_index.get(plus, None)
+            if plus_index is not None:
+                cosine_similarities += th.matmul(self.embeddings, self.embeddings[plus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[plus_index]))
+        if minus:
+            minus_index = self.word_to_index.get(minus, None)
+            if minus_index is not None:
+                cosine_similarities -= th.matmul(self.embeddings, self.embeddings[minus_index]) / (th.norm(self.embeddings, dim=1) * th.norm(self.embeddings[minus_index]))
 
-        similar_words.sort(key=lambda x: x[1], reverse=True)
-        return [x[0] for x in similar_words[:10]]
+        # Exclude the original word
+        cosine_similarities[target_index] = -float("inf")
+        top_similar_words = []
+        for i in range(10):
+            max_index = th.argmax(cosine_similarities).item()
+            top_similar_words.append(list(self.word_to_index.keys())[max_index])
+            cosine_similarities[max_index] = -float("inf")
 
+        return top_similar_words
 
 def main():
     args = parse_args()
